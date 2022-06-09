@@ -23,22 +23,22 @@ func NewCloudBuildClient(ctx context.Context, projectID string) (*CloudBuildClie
 	return client, nil
 }
 
-type cloudbuildResult struct {
+type CloudbuildResult struct {
 	Build   *cloudbuild.Build
 	Trigger *cloudbuild.BuildTrigger
 }
 
-func (client *CloudBuildClient) GetCurrentBuilds() ([]cloudbuildResult, error) {
+func (client *CloudBuildClient) GetCurrentBuilds() ([]*CloudbuildResult, error) {
 	builds := cloudbuild.NewProjectsBuildsService(client.Service)
 	triggers := cloudbuild.NewProjectsTriggersService(client.Service)
 	call, err := builds.List(client.ProjectID).Do()
-	var cloudBuildResults []cloudbuildResult
+	var cloudBuildResults []*CloudbuildResult
 	for _, build := range call.Builds {
 		trigger, err := triggers.Get(client.ProjectID, build.BuildTriggerId).Do()
 		if err != nil {
 			return cloudBuildResults, err
 		}
-		result := *&cloudbuildResult{
+		result := &CloudbuildResult{
 			Build:   build,
 			Trigger: trigger,
 		}

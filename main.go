@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jordangarrison/cloud-build-cli/cloudbuild"
+	cloudbuild "github.com/jordangarrison/cloud-build-cli/cloudbuild"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -33,13 +33,13 @@ func main() {
 }
 
 type Model struct {
-	choices  []string
+	choices  []*cloudbuild.CloudbuildResult
 	cursor   int
 	selected map[int]struct{}
+	update   interface{}
 }
 
 func initialModel() *Model {
-	var lines []string
 	client, err := cloudbuild.NewCloudBuildClient(context.TODO(), projectID)
 	if err != nil {
 		panic(err)
@@ -49,14 +49,9 @@ func initialModel() *Model {
 		panic(err)
 	}
 
-	for _, build := range builds {
-		buildLine := fmt.Sprintf("%s\t%s\t%s\t%s\t%s", build.Build.Status, build.Trigger.Name, build.Build.Tags, build.Build.StartTime, build.Build.FinishTime)
-		lines = append(lines, buildLine)
-	}
-
 	return &Model{
 		// Our shopping list is a grocery list
-		choices: lines,
+		choices: builds,
 
 		// A map which indicates which choices are selected. We're using
 		// the  map like a mathematical set. The keys refer to the indexes
@@ -80,13 +75,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursor--
 		case "down", "j":
 			m.cursor++
-		case "enter", " ":
+		case " ":
 			_, ok := m.selected[m.cursor]
 			if ok {
 				delete(m.selected, m.cursor)
 			} else {
 				m.selected[m.cursor] = struct{}{}
 			}
+		case "enter":
 		}
 	}
 	return m, nil
@@ -113,7 +109,11 @@ func (m *Model) View() string {
 		}
 
 		// render the row
-		row := fmt.Sprintf("%s [%s] %s", cursor, checked, choice)
+		finishTime := choice.Build.FinishTime
+		if finishTime == "" {
+			finishTime = "TBD"
+		}
+		row := fmt.Sprintf("%s [%s] %s\t%s\t%s\t%s\t%s\t%s", cursor, checked, choice.Build.Status, choice.Trigger.Name, choice.Build.Id, choice.Build.StartTime, finishTime, choice.Build.Tags)
 		viewString = append(viewString, row)
 	}
 	return strings.Join(viewString, "\n")
